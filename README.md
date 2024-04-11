@@ -22,7 +22,7 @@ Run tests via
 
 ## Results
 
-Last execution on 10th of April 2024, commit **351c9e7**.
+Last execution on 11th of April 2024, commit **630214f**.
 
 | Model | Provider | Tests passed | Tests failed | Execution time |
 | ----- | -------- | ------------ | ------------ | -------------- |
