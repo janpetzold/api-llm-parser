@@ -25,18 +25,28 @@ default_prompt = """Hello world, this is a great product so I'd like to order th
 
 
 class TestApiParser(unittest.TestCase):
-    def test_analyze_default(self):
-        result = analyze_with_llm("phi-2", default_context, default_prompt)
-        self.assertIn("NAME: Jan", result)
+#     def test_analyze_default(self):
+#         result = analyze_with_llm("meta.llama3-70b-instruct-v1:0", default_context, default_prompt)
+#         self.assertIn("NAME: Jan", result)
+#         self.assertIn("MAIL: jan@foo.com", result)
+#         self.assertIn("ADDRESS: Mollstrasse 1", result)
+#         self.assertIn("ZIP: 10117", result)
+#         self.assertIn("LOCATION: Berlin", result)
+#         self.assertIn("COUNTRY: DE", result)
+#         self.assertIn("REQUEST: Order", result)
+#         self.assertIn("PRODUCT: Hummingbird 42", result)
+#         self.assertIn("DATE: 2026-08-12", result)
+#         self.assertIn("TIMEZONE: Europe/Berlin", result)
+    def test_info(self):
+        prompt = """Hello world, this is Jan from Berlin. Can you send me more details about the Hummingbird 42 until 21st of July
+        2025? You can reach me at jan@foo.com."""
+
+        result = analyze_with_llm("meta.llama3-70b-instruct-v1:0", default_context, prompt)
+
         self.assertIn("MAIL: jan@foo.com", result)
-        self.assertIn("ADDRESS: Mollstrasse 1", result)
-        self.assertIn("ZIP: 10117", result)
-        self.assertIn("LOCATION: Berlin", result)
-        self.assertIn("COUNTRY: DE", result)
-        self.assertIn("REQUEST: Order", result)
         self.assertIn("PRODUCT: Hummingbird 42", result)
-        self.assertIn("DATE: 2026-08-12", result)
-        self.assertIn("TIMEZONE: Europe/Berlin", result)
+        self.assertIn("REQUEST: Info", result)
+        self.assertIn("DATE: 2025-07-21", result)
 
 if __name__ == '__main__':
     unittest.main()

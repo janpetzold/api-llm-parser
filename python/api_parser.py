@@ -16,6 +16,9 @@ def analyze_with_cloudflare(url, context, prompt):
         }
     )
     response_text = response.json()["result"]["response"]
+
+    # Gemma returns everything with ** so remove that
+    response_text = response_text.replace('*', '')
     #print(response_text)
     return response_text
 
@@ -60,7 +63,7 @@ def analyze_with_bedrock(model, body):
     elif model == "anthropic.claude-3-sonnet-20240229-v1:0":
         response_text = response_body["content"][0]["text"]
     else:
-        ## llama2
+        ## llama2/llama3
         response_text = response_body["generation"]
 
     #print(response_text)
@@ -72,12 +75,17 @@ def analyze_with_llm(model, context, prompt):
         case "llama-2-7b-chat-fp16":
             url = "https://api.cloudflare.com/client/v4/accounts/" + os.getenv('CLOUDFLARE_ACCOUNT_ID') + "/ai/run/@cf/meta/llama-2-7b-chat-fp16"
             return analyze_with_cloudflare(url, context, prompt)
+        case "llama-3-8b-instruct":
+            url = "https://api.cloudflare.com/client/v4/accounts/" + os.getenv('CLOUDFLARE_ACCOUNT_ID') + "/ai/run/@cf/meta/llama-3-8b-instruct"
+            return analyze_with_cloudflare(url, context, prompt)
         case "phi-2":
             url = "https://api.cloudflare.com/client/v4/accounts/" + os.getenv('CLOUDFLARE_ACCOUNT_ID') + "/ai/run/@cf/microsoft/phi-2"
-            return analyze_with_cloudflare(url, context, prompt)
+            # Phi-2 uses a specific syntax
+            return analyze_with_cloudflare(url, "", f"[CONTEXT]{context}[/CONTEXT][PROMPT]{prompt}[/PROMPT]")
         case "gemma-7b-it":
             url = "https://api.cloudflare.com/client/v4/accounts/" + os.getenv('CLOUDFLARE_ACCOUNT_ID') + "/ai/run/@hf/google/gemma-7b-it"
-            return analyze_with_cloudflare(url, context, prompt)
+            # Gemma uses specific syntax
+            return analyze_with_cloudflare(url, "", f"CONTEXT:{context} PROMPT: {prompt}")
         case "mistral-7b-instruct-v0.2":
             url = "https://api.cloudflare.com/client/v4/accounts/" + os.getenv('CLOUDFLARE_ACCOUNT_ID') + "/ai/run/@hf/mistralai/mistral-7b-instruct-v0.2"
             return analyze_with_cloudflare(url, context, prompt)
@@ -134,6 +142,17 @@ def analyze_with_llm(model, context, prompt):
 
             # Llama2 instruct models specific syntax
             instruction = f"<s>[INST] <<SYS>>{context}<</SYS>>{prompt}[/INST]"
+
+            body = json.dumps({
+                "prompt": instruction,
+                "temperature": 0.2,
+            })
+            return analyze_with_bedrock(model, body)
+        case "meta.llama3-70b-instruct-v1:0":
+            model = "meta.llama3-70b-instruct-v1:0"
+
+            # Llama3 instruct models specific syntax - follows the format of https://llama.meta.com/docs/model-cards-and-prompt-formats/meta-llama-3
+            instruction = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>{context}<|eot_id|><|start_header_id|>user<|end_header_id|>{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
 
             body = json.dumps({
                 "prompt": instruction,

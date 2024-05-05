@@ -3,6 +3,7 @@
 import unittest
 import re
 from api_parser import analyze_with_llm
+from datetime import datetime, timedelta
 
 current_llm = None
 
@@ -25,6 +26,15 @@ default_context = """You are a system assistant that helps to support APIs with 
 default_prompt = """Hello world, this is a great product so I'd like to order the Hummingbird 42. I am Jan from Berlin, 
         I'd like to be this shipped by 12th of August 2026 and my mail address is jan@foo.com and my address is 
         Mollstrasse 1 in 10117."""
+
+# Check small town of https://en.wikipedia.org/wiki/Len%C3%A7%C3%B3is Brazil
+brazil_prompt = """Hello world, this is a great product so I'd like to order the Hummingbird 42. I am Jan from Lençóis, 
+        I'd like to be this shipped by 12th of August 2026 and my mail address is jan@foo.com and my address is 
+        Rua José Florêncio 11 in 469600-000."""
+
+german_prompt = """Hallo, dieses Produkt sieht nützlich aus, ich möchte das Hummingbird 42 gern bestellen.
+        Ich bin Jan aus Berlin, der Versand soll bis zum 12. August 2026 erfolgen. Meine Mailadresse ist 
+        jan@foo.com und meine Postanschrift die Mollstrasse 1 in 10117 Berlin."""
 
 def run_tests_with_config(config):
     global current_llm
@@ -67,7 +77,6 @@ class TestApiParser(unittest.TestCase):
         self.assertIn("REQUEST: Order", result)
         self.assertIn("PRODUCT: Hummingbird 42", result)
         self.assertIn("DATE: 2026-08-12", result)
-        self.assertIn("TIMEZONE: Europe/Berlin", result)
 
     def test_analyze_gps(self):
         result = analyze_with_llm(current_llm, default_context, default_prompt)
@@ -82,19 +91,56 @@ class TestApiParser(unittest.TestCase):
             self.fail("GPS value not found")
 
     def test_analyze_small_town(self):
-        # Check small town of https://en.wikipedia.org/wiki/Len%C3%A7%C3%B3is Brazil
-        prompt = """Hello world, this is a great product so I'd like to order the Hummingbird 42. I am Jan from Lençóis, 
-        I'd like to be this shipped by 12th of August 2026 and my mail address is jan@foo.com and my address is 
-        Rua José Florêncio 11 in 469600-000."""
-
-        result = analyze_with_llm(current_llm, default_context, prompt)
+        result = analyze_with_llm(current_llm, default_context, brazil_prompt)
 
         self.assertIn("ADDRESS: Rua José Florêncio 11", result)
         self.assertIn("ZIP: 469600-000", result)
         self.assertIn("LOCATION: Lençóis", result)
         self.assertIn("COUNTRY: BR", result)
+
+    def test_analyze_timezone(self):
+        result = analyze_with_llm(current_llm, default_context, default_prompt)
+        self.assertIn("TIMEZONE: Europe/Berlin", result)
+
+        result = analyze_with_llm(current_llm, default_context, brazil_prompt)
         self.assertIn("TIMEZONE: America/Bahia", result)
     
+    def test_real_name(self):
+        prompt = """Hello world, this is a great product so I'd like to order the Hummingbird 42. My formal name is Maximilian 
+        however everybody just calls me Max, I come from Berlin and I'd like to be this shipped by 12th of August 2026 and my mail
+        address is max@foo.com and my address is Mollstrasse 1 in 10117."""
+
+        result = analyze_with_llm(current_llm, default_context, prompt)
+
+        self.assertIn("NAME: Maximilian", result)
+
+    def test_dates(self):
+        prompt = """Hello world, this is a great product so I'd like to order the Hummingbird 42. I am Jan from Berlin, 
+        I'd like to be this shipped by 2026-08-12 and my mail address is jan@foo.com and my address is 
+        Mollstrasse 1 in 10117."""
+        result = analyze_with_llm(current_llm, default_context, prompt)
+        self.assertIn("DATE: 2026-08-12", result)
+
+        prompt = """Hello world, this is a great product so I'd like to order the Hummingbird 42. I am Jan from Berlin, 
+        I'd like to be this shipped by 2026 08 12 and my mail address is jan@foo.com and my address is 
+        Mollstrasse 1 in 10117."""
+        result = analyze_with_llm(current_llm, default_context, prompt)
+        self.assertIn("DATE: 2026-08-12", result)
+
+        result = analyze_with_llm(current_llm, default_context, german_prompt)
+        self.assertIn("DATE: 2026-08-12", result)
+
+    def test_tomorrow(self):
+        prompt = """Hello world, this is a great product so I'd like to order the Hummingbird 42. I am Jan from Berlin, 
+        I need this rather urgent until tomorrow, my mail address is jan@foo.com and my address is 
+        Mollstrasse 1 in 10117."""
+
+        result = analyze_with_llm(current_llm, default_context, prompt)
+
+        tomorrow = datetime.today() + timedelta(days=1)
+        tomorrow_date_string = tomorrow.strftime('%Y-%m-%d')
+        self.assertIn("DATE: " + tomorrow_date_string, result)
+
     def test_missing_product(self):
         prompt = """Hello world, this is a great product so I'd like to order. I am Jan from Berlin, 
         I'd like to be this shipped by 12th of August 2026 and my mail address is jan@foo.com and my address is 
@@ -105,11 +151,7 @@ class TestApiParser(unittest.TestCase):
         self.assertIn("PRODUCT: Unknown", result)
 
     def test_language_german(self):
-        prompt = """Hallo, dieses Produkt sieht nützlich aus, ich möchte das Hummingbird 42 gern bestellen.
-        Ich bin Jan aus Berlin, der Versand soll bis zum 12.August 2026 erfolgen. Meine Mailadresse ist 
-        jan@foo.com und meine Postanschrift die Mollstrasse 1 in 10117 Berlin."""
-
-        result = analyze_with_llm(current_llm, default_context, prompt)
+        result = analyze_with_llm(current_llm, default_context, german_prompt)
         self.assertIn("NAME: Jan", result)
         self.assertIn("MAIL: jan@foo.com", result)
         self.assertIn("ADDRESS: Mollstrasse 1", result)
@@ -119,7 +161,6 @@ class TestApiParser(unittest.TestCase):
         self.assertIn("REQUEST: Order", result)
         self.assertIn("PRODUCT: Hummingbird 42", result)
         self.assertIn("DATE: 2026-08-12", result)
-        self.assertIn("TIMEZONE: Europe/Berlin", result)
 
     def test_language_romanian(self):
         prompt = """Buna ziua, acest produs pare util, as dori sa comand Hummingbird 42.
@@ -159,7 +200,6 @@ class TestApiParser(unittest.TestCase):
         self.assertIn("COUNTRY: DE", result)
         self.assertIn("REQUEST: Order", result)
         self.assertIn("DATE: Unknown", result)
-        self.assertIn("TIMEZONE: Europe/Berlin", result)
 
     def test_complaint(self):
         prompt = """Hello world, I am very unhappy with the Hummingbird 42. I turned it on and all I see is some
@@ -172,6 +212,17 @@ class TestApiParser(unittest.TestCase):
         self.assertIn("PRODUCT: Hummingbird 42", result)
         self.assertIn("REQUEST: Complaint", result)
         self.assertIn("DATE: 2021-10-10", result)
+
+    def test_info(self):
+        prompt = """Hello world, this is Jan from Berlin. Can you send me more details about the Hummingbird 42 until 21st of July
+        2025? You can reach me at jan@foo.com."""
+
+        result = analyze_with_llm(current_llm, default_context, prompt)
+
+        self.assertIn("MAIL: jan@foo.com", result)
+        self.assertIn("PRODUCT: Hummingbird 42", result)
+        self.assertIn("REQUEST: Info", result)
+        self.assertIn("DATE: 2025-07-21", result)
     
     def test_swap_mail_and_email(self):
         prompt = """Hello world, this is a great product so I'd like to order the Hummingbird 42. I am Jan from Berlin, 
@@ -189,6 +240,6 @@ class TestApiParser(unittest.TestCase):
         self.assertIn("COUNTRY: DE", result)
 
 if __name__ == '__main__':
-    #for config in ['gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'llama-2-7b-chat-fp16', 'phi-2', 'gemma-7b-it', 'mistral-7b-instruct-v0.2', 'mistral.mistral-large-2402-v1:0', 'anthropic.claude-3-sonnet-20240229-v1:0', 'meta.llama2-13b-chat-v1', 'meta.llama2-70b-chat-v1']:
-    for config in ['llama-2-7b-chat-fp16', 'phi-2', 'gemma-7b-it', 'mistral-7b-instruct-v0.2']:
+    #for config in ['gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'llama-2-7b-chat-fp16', 'meta.llama3-70b-instruct-v1:0', 'llama-3-8b-instruct', 'phi-2', 'gemma-7b-it', 'mistral-7b-instruct-v0.2', 'mistral.mistral-large-2402-v1:0', 'anthropic.claude-3-sonnet-20240229-v1:0', 'meta.llama2-13b-chat-v1', 'meta.llama2-70b-chat-v1']:
+    for config in ['meta.llama3-70b-instruct-v1:0']:
         run_tests_with_config(config)
