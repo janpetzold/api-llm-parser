@@ -240,6 +240,6 @@ class TestApiParser(unittest.TestCase):
         self.assertIn("COUNTRY: DE", result)
 
 if __name__ == '__main__':
-    #for config in ['gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'llama-2-7b-chat-fp16', 'meta.llama3-70b-instruct-v1:0', 'llama-3-8b-instruct', 'phi-2', 'gemma-7b-it', 'mistral-7b-instruct-v0.2', 'mistral.mistral-large-2402-v1:0', 'anthropic.claude-3-sonnet-20240229-v1:0', 'meta.llama2-13b-chat-v1', 'meta.llama2-70b-chat-v1']:
-    for config in ['meta.llama3-70b-instruct-v1:0']:
+    for config in ['gpt-3.5-turbo-0125', 'llama-2-7b-chat-fp16', 'meta.llama3-70b-instruct-v1:0', 'llama-3-8b-instruct', 'phi-2', 'gemma-7b-it', 'mistral-7b-instruct-v0.2', 'mistral.mistral-large-2402-v1:0', 'anthropic.claude-3-sonnet-20240229-v1:0', 'meta.llama2-13b-chat-v1', 'meta.llama2-70b-chat-v1']:
+    #for config in ['gpt-4-turbo-2024-04-09']:
         run_tests_with_config(config)

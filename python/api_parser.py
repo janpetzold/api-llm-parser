@@ -95,6 +95,12 @@ def analyze_with_llm(model, context, prompt):
         case "gpt-4-turbo-2024-04-09":
             model = "gpt-4-turbo-2024-04-09"
             return analyze_with_openai(model, context, prompt)
+        case "gpt-4o-mini":
+            model = "gpt-4o-mini"
+            return analyze_with_openai(model, context, prompt)
+        case "gpt-4o":
+            model = "gpt-4o"
+            return analyze_with_openai(model, context, prompt)
         case "mistral.mistral-large-2402-v1:0":
             model = "mistral.mistral-large-2402-v1:0"
             
